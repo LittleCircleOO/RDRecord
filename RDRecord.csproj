@@ -1,0 +1,96 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <OutputType>Library</OutputType>
+    <AssemblyName>RDRecord</AssemblyName>
+    <RootNamespace>RDRecord</RootNamespace>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <Version>0.1.0</Version>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <!-- GameExePath comes from Directory.Build.props (gitignored, machine-local) -->
+    <GameDir Condition="'$(GameExePath)' != ''">$([System.IO.Path]::GetDirectoryName($(GameExePath)))</GameDir>
+    <ManagedDir Condition="'$(GameDir)' != ''">$(GameDir)\Rhythm Doctor_Data\Managed</ManagedDir>
+  </PropertyGroup>
+
+  <Target Name="ValidateGamePath" BeforeTargets="CoreCompile"
+          Condition="'$(GameExePath)' == '' OR !Exists('$(GameExePath)')">
+    <Error Text="GameExePath not set or invalid. Create Directory.Build.props next to this file (see Directory.Build.props.example) with your game path." />
+  </Target>
+
+  <ItemGroup>
+    <Reference Include="0Harmony">
+      <HintPath>$(GameDir)\BepInEx\core\0Harmony.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="BepInEx">
+      <HintPath>$(GameDir)\BepInEx\core\BepInEx.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Assembly-CSharp">
+      <HintPath>$(ManagedDir)\Assembly-CSharp.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine">
+      <HintPath>$(ManagedDir)\UnityEngine.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>$(ManagedDir)\UnityEngine.CoreModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.AudioModule">
+      <HintPath>$(ManagedDir)\UnityEngine.AudioModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.InputLegacyModule">
+      <HintPath>$(ManagedDir)\UnityEngine.InputLegacyModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.ScreenCaptureModule">
+      <HintPath>$(ManagedDir)\UnityEngine.ScreenCaptureModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="RDTools">
+      <HintPath>$(ManagedDir)\RDTools.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Unity.Collections">
+      <HintPath>$(ManagedDir)\Unity.Collections.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="System.Net.Http">
+      <HintPath>$(ManagedDir)\System.Net.Http.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="System.IO.Compression">
+      <HintPath>$(ManagedDir)\System.IO.Compression.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="System.IO.Compression.FileSystem">
+      <HintPath>$(ManagedDir)\System.IO.Compression.FileSystem.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <!-- copy to out/ and deploy to game plugins -->
+  <Target Name="CopyOut" AfterTargets="Build">
+    <PropertyGroup>
+      <OutRoot>$(MSBuildProjectDirectory)\out</OutRoot>
+    </PropertyGroup>
+    <MakeDir Directories="$(OutRoot)" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(OutRoot)" />
+    <Message Text="RDRecord built -> $(OutRoot)" Importance="high" />
+  </Target>
+
+  <Target Name="Deploy" AfterTargets="CopyOut" Condition="'$(GameExePath)' != '' AND Exists('$(GameExePath)')">
+    <PropertyGroup>
+      <PluginDir>$(GameDir)\BepInEx\plugins\RDRecord</PluginDir>
+    </PropertyGroup>
+    <MakeDir Directories="$(PluginDir)" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(PluginDir)" />
+    <Message Text="RDRecord deployed -> $(PluginDir)" Importance="high" />
+  </Target>
+
+</Project>

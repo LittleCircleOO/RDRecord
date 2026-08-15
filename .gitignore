@@ -1,0 +1,17 @@
+# Build artifacts
+bin/
+obj/
+out/
+Build/
+
+# Machine-local config (game path etc.)
+Directory.Build.props
+
+# BepInEx runtime dirs when testing locally
+BepInEx/
+
+# ffmpeg binaries (auto-downloaded)
+ThirdParty/
+
+*.user
+.vs/

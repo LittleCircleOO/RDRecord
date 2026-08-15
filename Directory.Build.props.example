@@ -1,0 +1,7 @@
+<Project>
+  <!-- Copy this file to Directory.Build.props and adjust the game path. Gitignored. -->
+  <PropertyGroup>
+    <!-- Example (Windows Steam): C:\Program Files (x86)\Steam\steamapps\common\Rhythm Doctor\Rhythm Doctor.exe -->
+    <GameExePath>PUT-YOUR-GAME-PATH-HERE\Rhythm Doctor.exe</GameExePath>
+  </PropertyGroup>
+</Project>
