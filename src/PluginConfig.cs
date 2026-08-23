@@ -47,8 +47,9 @@ internal sealed class PluginConfig
                 "Automatically start/stop recording from game events (pre-start screen -> left level scene)."),
             KeepFailedTakes = cfg.Bind("Trigger", "KeepFailedTakes", true,
                 "Keep takes that never reached the rank screen (abandoned/failed runs)."),
-            FileNameTemplate = cfg.Bind("Trigger", "FileNameTemplate", "{song}_{difficulty}_{rank}_{date}",
-                "Output name template. Tokens: {song} {artist} {author} {difficulty} {rank} {mistakes} {id} {date}"),
+            FileNameTemplate = cfg.Bind("Trigger", "FileNameTemplate", "{song}_{difficulty}_{player}_{defib}_{rank}_{date}",
+                "Output name template. Tokens: {player} {song} {artist} {author} {difficulty} {defib} {defib1} {defib2} {rank} {mistakes} {id} {date}. " +
+                "{player} = Steam persona name (\"-\" when Steam is absent); {difficulty} = chart's own label; {defib} = player judgement config (single-player: P1 value, two-player: P1+P2)."),
             FFmpegPath = cfg.Bind("FFmpeg", "FFmpegPath", "",
                 "Optional explicit ffmpeg path. Search order: this path -> BepInEx/plugins/RDRecord/bin -> system PATH -> download (if enabled)."),
             AutoDownloadFFmpeg = cfg.Bind("FFmpeg", "AutoDownloadFFmpeg", true,

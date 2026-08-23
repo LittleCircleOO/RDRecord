@@ -16,6 +16,9 @@ internal sealed class TakeController
     internal string Author = "";
     internal string Difficulty = "";
     internal string LevelId = "";
+    internal string Defib1 = "";        // player judgement config (DefibMode), localized
+    internal string Defib2 = "";
+    internal string PlayerName = "";    // Steam persona name ("" when Steam absent)
     internal string? Rank;              // null until rank screen saved
     internal int Mistakes = -1;
     internal float RankSavedAt;         // Time.unscaledTime when rank saved

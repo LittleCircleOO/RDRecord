@@ -140,6 +140,7 @@ internal sealed class RecorderManager
             Directory.CreateDirectory(take.TmpDir);
 
             LevelMeta.FillAtBegin(take, scnGame.instance);
+            LevelMeta.FillPlayerConfig(take, scnGame.instance);
 
             _video = Plugin.Instance.gameObject.AddComponent<VideoCaptureBehaviour>();
             _video.Begin(take);
