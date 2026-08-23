@@ -19,10 +19,16 @@ internal sealed class PluginConfig
 
     public UnityEngine.KeyCode Hotkey { get; private set; }
 
-    /// <summary>Default output location, shown in the config file for discoverability.
-    /// Empty OutputDir at runtime still falls back here (unchanged behavior).</summary>
-    private static string DefaultOutputDir =>
-        System.IO.Path.Combine(BepInEx.Paths.PluginPath, "RDRecord", "recordings");
+    /// <summary>Resolved at runtime (RD.ChartRendering RenderPaths-style): the user's
+    /// Videos/RDRecord folder; falls back to the plugin dir when the OS reports no
+    /// Videos folder (e.g. headless Linux without xdg-user-dirs).</summary>
+    internal static string ResolveDefaultOutputDir()
+    {
+        string videos = System.Environment.GetFolderPath(System.Environment.SpecialFolder.MyVideos);
+        return string.IsNullOrWhiteSpace(videos)
+            ? System.IO.Path.Combine(BepInEx.Paths.PluginPath, "RDRecord", "recordings")
+            : System.IO.Path.Combine(videos, "RDRecord");
+    }
 
     public static PluginConfig Bind(ConfigFile cfg)
     {
@@ -40,8 +46,8 @@ internal sealed class PluginConfig
             Crf = cfg.Bind("Recording", "Crf", 23,
                 new ConfigDescription("x264 CRF quality. Lower = better quality / larger file (18-28).",
                     new AcceptableValueRange<int>(18, 28))),
-            OutputDir = cfg.Bind("Recording", "OutputDir", DefaultOutputDir,
-                "Output directory for finished recordings. Clear/empty falls back to: " + DefaultOutputDir),
+            OutputDir = cfg.Bind("Recording", "OutputDir", "",
+                "Output directory for finished recordings. Empty = user's Videos/RDRecord folder (plugin folder fallback when the OS has none). Environment variables are expanded."),
             HotkeyName = cfg.Bind("Recording", "Hotkey", "F9",
                 "Manual start/stop hotkey (UnityEngine.KeyCode name, empty to disable)"),
             AutoTrigger = cfg.Bind("Trigger", "AutoTrigger", true,

@@ -26,8 +26,8 @@ internal sealed class RecorderManager
         get
         {
             var dir = Plugin.Cfg.OutputDir.Value;
-            if (dir.Length == 0) dir = Path.Combine(Paths.PluginPath, "RDRecord", "recordings");
-            return dir;
+            if (dir.Trim().Length == 0) return PluginConfig.ResolveDefaultOutputDir();
+            return Path.GetFullPath(System.Environment.ExpandEnvironmentVariables(dir.Trim()));
         }
     }
 
