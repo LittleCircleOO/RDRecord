@@ -30,8 +30,11 @@ internal static class FfmpegBinary
         { UnityEngine.RuntimePlatform.LinuxPlayer,
             ("https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz", "tarxz") },
         // zip: archive contains ffmpeg at root (x86_64; runs under Rosetta on Apple Silicon)
+        // NOTE: old /pub/ffmpeg/get-ffmpeg.zip is dead (404, site moved to a download
+        // API). Use getrelease - the API default (get/zip) is a master snapshot,
+        // same build class as the 2026-08-23 Windows nightly incident.
         { UnityEngine.RuntimePlatform.OSXPlayer,
-            ("https://evermeet.cx/pub/ffmpeg/get-ffmpeg.zip", "zip") },
+            ("https://evermeet.cx/ffmpeg/getrelease/zip", "zip") },
     };
 
     private static string ExeName =>
