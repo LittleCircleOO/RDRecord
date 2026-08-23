@@ -128,12 +128,15 @@ internal sealed class RecorderManager
 
             int fps = Plugin.Cfg.Fps.Value;
             int crf = Plugin.Cfg.Crf.Value;
+            int maxMbps = Plugin.Cfg.MaxRateMbps.Value;
             bool h265 = Plugin.Cfg.Codec.Value.Equals("H265", StringComparison.OrdinalIgnoreCase);
             var encoder = ResolveEncoder(h265);
             int w = UnityEngine.Screen.width, h = UnityEngine.Screen.height;
             if (w <= 0 || h <= 0) { Plugin.Log.LogWarning("begin skipped: invalid screen size"); return; }
 
-            var take = new TakeController(w, h, fps, crf, encoder)
+            var (outW, outH) = FfmpegArgs.ComputeOutputSize(w, h, Plugin.Cfg.Resolution.Value);
+
+            var take = new TakeController(w, h, fps, crf, maxMbps, outW, outH, encoder)
             {
                 TmpDir = Path.Combine(OutputDir, ".tmp", $"{DateTime.Now:yyyyMMdd-HHmmss}-{_seq++}")
             };
@@ -150,7 +153,8 @@ internal sealed class RecorderManager
 
             take.StartPumps();
             _take = take;
-            Plugin.Log.LogInfo($"REC start ({reason}): {w}x{h}@{fps} {take.Encoder} crf{crf} song='{take.Song}'");
+            string sizeInfo = outW != w || outH != h ? $" -> {outW}x{outH} ({Plugin.Cfg.Resolution.Value})" : "";
+            Plugin.Log.LogInfo($"REC start ({reason}): {w}x{h}{sizeInfo}@{fps} {take.Encoder} crf{crf} maxrate={(maxMbps > 0 ? $"{maxMbps}M" : "auto")} song='{take.Song}'");
         }
         catch (Exception e)
         {

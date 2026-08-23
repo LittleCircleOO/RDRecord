@@ -67,11 +67,39 @@ internal sealed class FfmpegProc
 /// <summary>Command line builders - field-validated against ffmpeg 8.1.2 (E2E tested).</summary>
 internal static class FfmpegArgs
 {
-    public static string Video(int w, int h, int fps, int crf, string encoder)
+    /// <summary>Resolve the output size for a Resolution preset against a source size.
+    /// Fit-inside semantics: sources at or below the preset box pass through untouched;
+    /// larger ones scale by min(boxW/srcW, boxH/srcH) preserving aspect (no letterbox,
+    /// one axis lands on the box edge, the other fits inside it). Output axes are
+    /// rounded down to even numbers (yuv420p requirement).</summary>
+    public static (int w, int h) ComputeOutputSize(int srcW, int srcH, string preset)
+    {
+        switch (preset)
+        {
+            case "1080p":
+                return FitInside(srcW, srcH, 1920, 1080);
+            case "720p":
+                return FitInside(srcW, srcH, 1280, 720);
+            default:
+                return (srcW, srcH);
+        }
+    }
+
+    private static (int, int) FitInside(int srcW, int srcH, int boxW, int boxH)
+    {
+        if (srcW <= boxW && srcH <= boxH) return (srcW, srcH);   // smaller or equal: passthrough
+        double scale = Math.Min((double)boxW / srcW, (double)boxH / srcH);
+        int w = Math.Max(2, (int)Math.Floor(srcW * scale)) & ~1;
+        int h = Math.Max(2, (int)Math.Floor(srcH * scale)) & ~1;
+        return (w, h);
+    }
+
+    public static string Video(int w, int h, int outW, int outH, int fps, int crf, int maxRateMbps, string encoder)
     {
         int gop = fps * 10;
-        string maxrate = fps >= 60 ? "4M" : "2M";
-        string bufsize = fps >= 60 ? "8M" : "4M";
+        int mbps = maxRateMbps > 0 ? maxRateMbps : (fps >= 60 ? 4 : 2);
+        string maxrate = $"{mbps}M";
+        string bufsize = $"{mbps * 2}M";
         // NOTE: no -use_wallclock_as_timestamps here: the rawvideo demuxer
         // assigns increasing pts itself (from -r), so wallclock stamps never
         // engage; cadence integrity is the plugin's job (CFR shaping in
@@ -118,11 +146,19 @@ internal static class FfmpegArgs
         // rate control; clamping it with maxrate degrades quality unexpectedly)
         string rateArgs = encoder.StartsWith("lib") ? $"-maxrate {maxrate} -bufsize {bufsize} " : "";
 
+        // scale (down only) before pixel-format conversion; lanczos keeps chart
+        // text sharp. Identical dims would make scale a cheap no-op, but we skip
+        // it entirely for passthrough to keep the filter graph minimal.
+        bool scaling = outW != w || outH != h;
+        string vf = scaling
+            ? $"-vf \"scale={outW}:{outH}:flags=lanczos,format=yuv420p\" "
+            : "-vf \"format=yuv420p\" ";
+
         return
             "-hide_banner -loglevel error " +
             $"-f rawvideo -pix_fmt rgba -s {w}x{h} -r {fps} " +
             "-i pipe:0 " +
-            "-vf \"format=yuv420p\" " +
+            vf +
             codecArgs + " " + rateArgs +
             "-fps_mode passthrough " +
             "-movflags +frag_keyframe+empty_moov+default_base_moof " +

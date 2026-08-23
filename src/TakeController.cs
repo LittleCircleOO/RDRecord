@@ -41,7 +41,10 @@ internal sealed class TakeController
     internal readonly int Fps;
     internal readonly int Width;
     internal readonly int Height;
+    internal readonly int OutWidth;    // ffmpeg output size (may be downscaled from Width/Height)
+    internal readonly int OutHeight;
     internal readonly int Crf;
+    internal readonly int MaxRateMbps;
     internal readonly string Encoder;
 
     private FfmpegProc? _videoProc;
@@ -70,9 +73,11 @@ internal sealed class TakeController
     private readonly Thread _videoThread;
     private readonly Thread _audioThread;
 
-    internal TakeController(int width, int height, int fps, int crf, string encoder)
+    internal TakeController(int width, int height, int fps, int crf, int maxRateMbps,
+        int outWidth, int outHeight, string encoder)
     {
-        Width = width; Height = height; Fps = fps; Crf = crf; Encoder = encoder;
+        Width = width; Height = height; Fps = fps; Crf = crf; MaxRateMbps = maxRateMbps;
+        OutWidth = outWidth; OutHeight = outHeight; Encoder = encoder;
         _frameSize = width * height * 4;
         for (int i = 0; i < QueueCap; i++) _framePool.Push(new byte[_frameSize]);
         _videoThread = new Thread(VideoPumpLoop) { Name = "RDRecord-video", IsBackground = true };
@@ -235,7 +240,8 @@ internal sealed class TakeController
         {
             if (_videoProc != null) return true;
             if (Stopping) return false;
-            var proc = FfmpegProc.Start(FfmpegArgs.Video(Width, Height, Fps, Crf, Encoder), TmpDir, "video");
+            var proc = FfmpegProc.Start(
+                FfmpegArgs.Video(Width, Height, OutWidth, OutHeight, Fps, Crf, MaxRateMbps, Encoder), TmpDir, "video");
             if (proc == null) { Plugin.Log.LogError("failed to start video ffmpeg"); Stopping = true; return false; }
             _videoProc = proc;
             return true;

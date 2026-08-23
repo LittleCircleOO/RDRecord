@@ -8,6 +8,8 @@ internal sealed class PluginConfig
     public ConfigEntry<string> Encoder = null!;
     public ConfigEntry<int> Fps = null!;
     public ConfigEntry<int> Crf = null!;
+    public ConfigEntry<int> MaxRateMbps = null!;
+    public ConfigEntry<string> Resolution = null!;
     public ConfigEntry<string> OutputDir = null!;
     public ConfigEntry<string> HotkeyName = null!;
     public ConfigEntry<bool> AutoTrigger = null!;
@@ -47,6 +49,12 @@ internal sealed class PluginConfig
             Crf = cfg.Bind("Recording", "Crf", 23,
                 new ConfigDescription("x264 CRF quality. Lower = better quality / larger file (18-28).",
                     new AcceptableValueRange<int>(18, 28))),
+            MaxRateMbps = cfg.Bind("Recording", "MaxRateMbps", 0,
+                new ConfigDescription("Video bitrate ceiling in Mbps (peak cap for CRF mode, software encoders). 0 = auto: 2 Mbps at 30fps, 4 Mbps at 60fps (the previously hardcoded values).",
+                    new AcceptableValueRange<int>(0, 100))),
+            Resolution = cfg.Bind("Recording", "Resolution", "Default",
+                new ConfigDescription("Output size preset. Default: passthrough at native size. 1080p/720p: downscale to fit inside the preset box with aspect preserved (no black bars); smaller or equal sources pass through untouched.",
+                    new AcceptableValueList<string>("Default", "1080p", "720p"))),
             OutputDir = cfg.Bind("Recording", "OutputDir", "",
                 "Output directory for finished recordings. Empty = user's Videos/RDRecord folder (plugin folder fallback when the OS has none). Environment variables are expanded."),
             HotkeyName = cfg.Bind("Recording", "Hotkey", "F9",
