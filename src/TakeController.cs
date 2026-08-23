@@ -49,6 +49,11 @@ internal sealed class TakeController
 
     private FfmpegProc? _videoProc;
     private FfmpegProc? _audioProc;
+    // guards ONLY proc reference creation/teardown (short, non-blocking).
+    // Pipe writes MUST stay outside: each pipe has a single writer, and a
+    // stalled child blocking a Write while holding this lock starves the other
+    // pump and finalize (2026-08-23 incident: nightly aac hang froze the whole
+    // take - 28k dropped frames - and deadlocked game shutdown).
     private readonly object _procLock = new();
     internal volatile bool Stopping;    // pipe dead / abort
 
@@ -188,35 +193,33 @@ internal sealed class TakeController
                 if (!EnsureVideoProc()) { lock (_frameQ) ReturnFrameLocked(item.frame); continue; }
                 try
                 {
-                    lock (_procLock)
+                    // ---- CFR shaping: rawvideo pipe gets pts from -r alone
+                    // (the demuxer assigns increasing pts; wallclock stamps
+                    // never engage), so the pipe MUST receive a strictly
+                    // constant frame cadence or the take speeds up/skews
+                    // against audio. Every timeline hole (game present rate
+                    // below target, dropped frames) is filled with repeats
+                    // of the incoming frame: x264 codes them as skip
+                    // macroblocks at ~zero bitrate cost, playback shows a
+                    // frozen frame (honest: no new frame existed), and
+                    // A/V sync stays rigid.
+                    // No _procLock here: single writer per pipe (see field note).
+                    if (T0Video == null) { T0Video = item.t; lastIdx = 0; }
+                    long idx = (long)Math.Round((item.t - T0Video.Value) * Fps);
+                    if (idx <= lastIdx)
                     {
-                        // ---- CFR shaping: rawvideo pipe gets pts from -r alone
-                        // (the demuxer assigns increasing pts; wallclock stamps
-                        // never engage), so the pipe MUST receive a strictly
-                        // constant frame cadence or the take speeds up/skews
-                        // against audio. Every timeline hole (game present rate
-                        // below target, dropped frames) is filled with repeats
-                        // of the incoming frame: x264 codes them as skip
-                        // macroblocks at ~zero bitrate cost, playback shows a
-                        // frozen frame (honest: no new frame existed), and
-                        // A/V sync stays rigid.
-                        if (T0Video == null) { T0Video = item.t; lastIdx = 0; }
-                        long idx = (long)Math.Round((item.t - T0Video.Value) * Fps);
-                        if (idx <= lastIdx)
+                        // same slot again (burst) - drop the stale copy
+                        FramesDropped++;
+                    }
+                    else
+                    {
+                        while (lastIdx < idx - 1)   // hole: repeat incoming frame
                         {
-                            // same slot again (burst) - drop the stale copy
-                            FramesDropped++;
-                        }
-                        else
-                        {
-                            while (lastIdx < idx - 1)   // hole: repeat incoming frame
-                            {
-                                _videoProc!.Stdin.Write(item.frame, 0, item.frame.Length);
-                                lastIdx++; FramesRepeated++;
-                            }
                             _videoProc!.Stdin.Write(item.frame, 0, item.frame.Length);
-                            lastIdx = idx;
+                            lastIdx++; FramesRepeated++;
                         }
+                        _videoProc!.Stdin.Write(item.frame, 0, item.frame.Length);
+                        lastIdx = idx;
                     }
                 }
                 catch (Exception e)
@@ -271,33 +274,39 @@ internal sealed class TakeController
                     _ringTail += take;
                 }
 
-                lock (_procLock)
+                if (!EnsureAudioProc(out var ap)) return;
+                try
                 {
-                    if (Stopping) return;
-                    if (_audioProc == null)
-                    {
-                        int rate, ch;
-                        lock (_ring) { rate = AudioRate; ch = AudioChannels; }
-                        var p = FfmpegProc.Start(FfmpegArgs.Audio(rate, Math.Max(1, ch)), TmpDir, "audio");
-                        if (p == null) { Plugin.Log.LogError("failed to start audio ffmpeg"); Stopping = true; return; }
-                        _audioProc = p;
-                    }
-                    try
-                    {
-                        if (T0Audio == null) T0Audio = NowSec;
-                        _audioProc.Stdin.Write(carry, 0, take);
-                    }
-                    catch (Exception e)
-                    {
-                        Plugin.Log.LogWarning($"audio pipe write failed: {e.Message}");
-                        Stopping = true;
-                        return;
-                    }
+                    // No _procLock here: single writer per pipe (see field note).
+                    if (T0Audio == null) T0Audio = NowSec;
+                    ap.Stdin.Write(carry, 0, take);
+                }
+                catch (Exception e)
+                {
+                    Plugin.Log.LogWarning($"audio pipe write failed: {e.Message}");
+                    Stopping = true;
+                    return;
                 }
             }
         }
         catch (Exception e) { Plugin.Log.LogError($"audio pump crashed: {e}"); }
         finally { lock (_procLock) { try { _audioProc?.CloseInput(); } catch { } } }
+    }
+
+    private bool EnsureAudioProc(out FfmpegProc proc)
+    {
+        lock (_procLock)
+        {
+            if (_audioProc != null) { proc = _audioProc; return true; }
+            if (Stopping) { proc = null!; return false; }
+            int rate, ch;
+            lock (_ring) { rate = AudioRate; ch = AudioChannels; }
+            var p = FfmpegProc.Start(FfmpegArgs.Audio(rate, Math.Max(1, ch)), TmpDir, "audio");
+            if (p == null) { Plugin.Log.LogError("failed to start audio ffmpeg"); Stopping = true; proc = null!; return false; }
+            _audioProc = p;
+            proc = p;
+            return true;
+        }
     }
 
     // ================= finalize (background thread) =================

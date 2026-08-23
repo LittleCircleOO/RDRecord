@@ -18,8 +18,14 @@ internal static class FfmpegBinary
     private static readonly Dictionary<UnityEngine.RuntimePlatform, (string url, string kind)> Sources = new()
     {
         // zip: archive contains <top>/bin/ffmpeg.exe
+        // NOTE: 8.1 release branch, NOT master: a rolling master/nightly once
+        // shipped a broken aac encoder that ate stdin, burned a core and never
+        // wrote output (2026-08-23 incident), taking the whole take down with
+        // it. All our arg strings are E2E-validated against 8.1.x; the asset
+        // name stays stable across branch rebuilds (only the tag stays
+        // "latest"). 9.0 exists too - revisit after validating its CLI.
         { UnityEngine.RuntimePlatform.WindowsPlayer,
-            ("https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip", "zip") },
+            ("https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-n8.1-latest-win64-gpl-8.1.zip", "zip") },
         // tar.xz: archive contains ffmpeg-release-<ver>-amd64-static/ffmpeg (needs system tar+xz)
         { UnityEngine.RuntimePlatform.LinuxPlayer,
             ("https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz", "tarxz") },
