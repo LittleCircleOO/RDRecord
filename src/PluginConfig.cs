@@ -13,6 +13,7 @@ internal sealed class PluginConfig
     public ConfigEntry<bool> AutoTrigger = null!;
     public ConfigEntry<bool> KeepFailedTakes = null!;
     public ConfigEntry<string> FileNameTemplate = null!;
+    public ConfigEntry<bool> LocalizeNames = null!;
     public ConfigEntry<string> FFmpegPath = null!;
     public ConfigEntry<bool> AutoDownloadFFmpeg = null!;
 
@@ -50,6 +51,8 @@ internal sealed class PluginConfig
             FileNameTemplate = cfg.Bind("Trigger", "FileNameTemplate", "{song}_{difficulty}_{player}_{defib}_{rank}_{date}",
                 "Output name template. Tokens: {player} {song} {artist} {author} {difficulty} {defib} {defib1} {defib2} {rank} {mistakes} {id} {date}. " +
                 "{player} = Steam persona name (\"-\" when Steam is absent); {difficulty} = chart's own label; {defib} = player judgement config (single-player: P1 value, two-player: P1+P2)."),
+            LocalizeNames = cfg.Bind("Trigger", "LocalizeNames", true,
+                "Render {difficulty} and {defib} tokens as localized display names (game language, e.g. \"普通\") when true; as raw enum values (e.g. \"Normal\") when false."),
             FFmpegPath = cfg.Bind("FFmpeg", "FFmpegPath", "",
                 "Optional explicit ffmpeg path. Search order: this path -> BepInEx/plugins/RDRecord/bin -> system PATH -> download (if enabled)."),
             AutoDownloadFFmpeg = cfg.Bind("FFmpeg", "AutoDownloadFFmpeg", true,

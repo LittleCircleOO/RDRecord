@@ -46,15 +46,16 @@ internal static class LevelMeta
     /// Single-player resolves to P1 only (verified: scrHandController.Awake dresses the
     /// player-operated right arm with p1Skin unconditionally; leftArm becomes P2 only
     /// under GC.twoPlayerMode; GetHitMargin branches P1->p1DefibMode / P2->p2DefibMode).
-    /// In-level: read the live scnGame statics; otherwise Persistence (saved config).</summary>
+    /// In-level: read the live scnGame statics; otherwise Persistence (saved config).
+    /// Stores raw enum names; localized (per config) at filename build time.</summary>
     public static void FillPlayerConfig(TakeController take, scnGame? game)
     {
         try
         {
-            take.Defib1 = LocalizeDefib(ReadDefib(game, p1: true));
+            take.Defib1 = RawDefib(ReadDefib(game, p1: true));
             bool twoPlayer = false;
             try { twoPlayer = GC.twoPlayerMode; } catch { }
-            take.Defib2 = twoPlayer ? LocalizeDefib(ReadDefib(game, p1: false)) : "";
+            take.Defib2 = twoPlayer ? RawDefib(ReadDefib(game, p1: false)) : "";
         }
         catch (Exception e)
         {
@@ -79,13 +80,10 @@ internal static class LevelMeta
         catch { return null; }
     }
 
-    private static string LocalizeDefib(object? mode)
+    private static string RawDefib(object? mode)
     {
-        if (mode == null) return "";
-        var s = mode.ToString() ?? "";
-        if (s.Length == 0) return "";
-        // pause menu localization key pattern ("enum.DefibMode." + value)
-        return TryLocalized("enum.DefibMode." + s) ?? Sanitize(s);
+        var s = mode?.ToString() ?? "";
+        return s.Length == 0 ? "" : s;
     }
 
     private static string? TryLocalized(string key)
@@ -101,11 +99,11 @@ internal static class LevelMeta
             .Replace("{song}", OrDash(take.Song))
             .Replace("{artist}", OrDash(take.Artist))
             .Replace("{author}", OrDash(take.Author))
-            .Replace("{difficulty}", OrDash(take.Difficulty))
+            .Replace("{difficulty}", OrDash(NameOf(cfg, take.Difficulty, "enum.LevelDifficulty.")))
             .Replace("{player}", OrDash(take.PlayerName))
-            .Replace("{defib}", OrDash(DefibSmart(take)))
-            .Replace("{defib1}", OrDash(take.Defib1))
-            .Replace("{defib2}", OrDash(take.Defib2))
+            .Replace("{defib}", OrDash(DefibSmart(cfg, take)))
+            .Replace("{defib1}", OrDash(NameOf(cfg, take.Defib1, "enum.DefibMode.")))
+            .Replace("{defib2}", OrDash(NameOf(cfg, take.Defib2, "enum.DefibMode.")))
             .Replace("{rank}", take.Rank != null ? Sanitize(take.Rank) : "NR")
             .Replace("{mistakes}", take.Mistakes >= 0 ? take.Mistakes.ToString() : "-")
             .Replace("{id}", OrDash(take.LevelId))
@@ -117,11 +115,21 @@ internal static class LevelMeta
 
     private static string OrDash(string s) => s.Length == 0 ? "-" : s;
 
-    /// <summary>{defib}: single-player = P1 value; two-player = "P1val+P2val".</summary>
-    private static string DefibSmart(TakeController take)
+    /// <summary>Unified token rendering: localized display name (RDString, the same
+    /// keys the game UI uses) or raw enum value, per LocalizeNames config.</summary>
+    private static string NameOf(PluginConfig cfg, string raw, string keyPrefix)
     {
-        if (take.Defib2.Length == 0) return take.Defib1;
-        return take.Defib1.Length == 0 ? take.Defib2 : $"{take.Defib1}+{take.Defib2}";
+        if (raw.Length == 0 || !cfg.LocalizeNames.Value) return raw;
+        return TryLocalized(keyPrefix + raw) ?? raw;
+    }
+
+    /// <summary>{defib}: single-player = P1 value; two-player = "P1val+P2val".</summary>
+    private static string DefibSmart(PluginConfig cfg, TakeController take)
+    {
+        string a = NameOf(cfg, take.Defib1, "enum.DefibMode.");
+        string b = NameOf(cfg, take.Defib2, "enum.DefibMode.");
+        if (b.Length == 0) return a;
+        return a.Length == 0 ? b : $"{a}+{b}";
     }
 
     private static string Sanitize(string s)
