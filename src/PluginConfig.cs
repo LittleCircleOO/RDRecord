@@ -16,6 +16,7 @@ internal sealed class PluginConfig
     public ConfigEntry<bool> LocalizeNames = null!;
     public ConfigEntry<string> FFmpegPath = null!;
     public ConfigEntry<bool> AutoDownloadFFmpeg = null!;
+    public ConfigEntry<bool> DumpFirstFrame = null!;
 
     public UnityEngine.KeyCode Hotkey { get; private set; }
 
@@ -62,7 +63,9 @@ internal sealed class PluginConfig
             FFmpegPath = cfg.Bind("FFmpeg", "FFmpegPath", "",
                 "Optional explicit ffmpeg path. Search order: this path -> BepInEx/plugins/RDRecord/bin -> system PATH -> download (if enabled)."),
             AutoDownloadFFmpeg = cfg.Bind("FFmpeg", "AutoDownloadFFmpeg", true,
-                "Download ffmpeg automatically when no local copy is found (Windows: BtbN GPL zip; Linux: johnvansickle tar.xz, needs tar+xz-utils; macOS: evermeet.cx zip).")
+                "Download ffmpeg automatically when no local copy is found (Windows: BtbN GPL zip; Linux: johnvansickle tar.xz, needs tar+xz-utils; macOS: evermeet.cx zip)."),
+            DumpFirstFrame = cfg.Bind("Diagnostics", "DumpFirstFrame", false,
+                "Write the first captured frame (pre-flip raw readback bytes, Unity texture semantics) as a dot-prefixed PNG next to the recordings, to diagnose flipping/color issues.")
         };
         c.Hotkey = System.Enum.TryParse<UnityEngine.KeyCode>(c.HotkeyName.Value, true, out var kc) ? kc : UnityEngine.KeyCode.None;
         c.HotkeyName.SettingChanged += (_, _) =>

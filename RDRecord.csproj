@@ -52,6 +52,10 @@
       <HintPath>$(ManagedDir)\UnityEngine.ScreenCaptureModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="UnityEngine.ImageConversionModule">
+      <HintPath>$(ManagedDir)\UnityEngine.ImageConversionModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="RDTools">
       <HintPath>$(ManagedDir)\RDTools.dll</HintPath>
       <Private>false</Private>
