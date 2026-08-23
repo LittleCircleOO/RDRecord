@@ -28,7 +28,10 @@ public sealed class Plugin : BaseUnityPlugin
     {
         Instance = this;
         Log = Logger;
-        Cfg = PluginConfig.Bind(Config);
+        // BepInEx names the auto-config "{GUID}.cfg" (rd.rdrecord.cfg);
+        // use an explicit file name so the config reads RDRecord.cfg. GUID stays unchanged.
+        var configFile = new ConfigFile(System.IO.Path.Combine(Paths.ConfigPath, "RDRecord.cfg"), false, Info.Metadata);
+        Cfg = PluginConfig.Bind(configFile);
         Recorder = new RecorderManager();
 
         _harmony = new Harmony(PluginGuid);
